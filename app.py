@@ -29,14 +29,13 @@ keras = tf.keras
 
 # ============== Configuration ==============
 API_KEY = os.environ.get("API_KEY", "sk_test_123456789")  # Set in Render environment
-SAMPLE_RATE = 22050
+SAMPLE_RATE = 16000  # Match training sample rate
 N_LFCC = 40
 N_FFT = 2048
 HOP_LENGTH = 512
-# Model expects exactly 312 time steps (fixed)
-TARGET_TIME_STEPS = 312
 # Allow longer audio input, we'll pad/truncate to exactly 312 steps
 MAX_DURATION = 10.0  # seconds (flexible input, always output 312 steps)
+TARGET_TIME_STEPS = int(MAX_DURATION * SAMPLE_RATE / HOP_LENGTH)  # = 313
 
 SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
 
@@ -114,8 +113,8 @@ print("Model ready!")
 # Load normalization parameters
 print("Loading normalization parameters...")
 norm_params = np.load("model/normalization_params.npz")
-MEAN = norm_params.get("mean", None)
-STD = norm_params.get("std", None)
+MEAN = float(norm_params.get("mean", None))
+STD = float(norm_params.get("std", None))
 print("Normalization parameters loaded!")
 
 # ============== FastAPI App ==============
@@ -190,20 +189,9 @@ def preprocess_audio_bytes(audio_bytes):
     features = features.astype(np.float32)
     
     # Normalize using saved parameters (feature-wise normalization)
-    if MEAN is not None and STD is not None:
-        # Ensure MEAN and STD are broadcastable to features shape
-        # features shape: (n_lfcc, time_steps) = (40, 312)
-        # MEAN/STD should be (40, 1) or (40, 312)
-        mean = np.array(MEAN, dtype=np.float32)
-        std = np.array(STD, dtype=np.float32)
-        
-        # Reshape if needed for feature-wise normalization
-        if mean.ndim == 1:
-            mean = mean[:, np.newaxis]  # (40,) -> (40, 1)
-        if std.ndim == 1:
-            std = std[:, np.newaxis]    # (40,) -> (40, 1)
-            
-        features = (features - mean) / (std + 1e-8)
+    features = (features - MEAN) / (STD + 1e-8)
+
+
     
     # Reshape for CNN input: (batch, height, width, channels)
     features = features[np.newaxis, ..., np.newaxis]
