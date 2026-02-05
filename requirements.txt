@@ -1,6 +1,6 @@
-# Core API framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
+# Core API framework (versions compatible with TensorFlow 2.13)
+fastapi==0.100.0
+uvicorn[standard]==0.23.0
 python-multipart==0.0.6
 
 # ML/Audio processing
@@ -10,5 +10,5 @@ librosa==0.10.1
 numpy==1.24.3
 soundfile==0.12.1
 
-# Utilities
-pydantic==2.5.2
+# Utilities (compatible with TF 2.13's typing-extensions<4.6.0)
+pydantic==1.10.12
