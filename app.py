@@ -1,11 +1,12 @@
 """
 AI-Generated Voice Detection API
 FastAPI application for detecting AI-generated vs Human voices
+Optimized for Render free tier (512MB RAM)
 """
 
 import os
 import base64
-import tempfile
+import io
 import numpy as np
 import librosa
 from fastapi import FastAPI, HTTPException, Header, Request
@@ -13,8 +14,17 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional
 
-# Use TensorFlow's built-in Keras (compatible with TF 2.13)
+# ============== TensorFlow Optimizations ==============
+# Set before importing TF
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TF warnings
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Disable oneDNN for consistent results
+
 import tensorflow as tf
+
+# Limit CPU threads for free tier
+tf.config.threading.set_intra_op_parallelism_threads(2)
+tf.config.threading.set_inter_op_parallelism_threads(2)
+
 keras = tf.keras
 
 # ============== Configuration ==============
@@ -23,7 +33,7 @@ SAMPLE_RATE = 22050
 N_LFCC = 40
 N_FFT = 2048
 HOP_LENGTH = 512
-MAX_DURATION = 10.0  # seconds
+MAX_DURATION = 5.0  # seconds
 
 SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
 
@@ -39,6 +49,13 @@ norm_params = np.load("model/normalization_params.npz")
 MEAN = norm_params.get("mean", None)
 STD = norm_params.get("std", None)
 print("Normalization parameters loaded!")
+
+# Pre-warm model (first inference is slow due to graph compilation)
+print("Warming up model...")
+target_length = int(MAX_DURATION * SAMPLE_RATE / HOP_LENGTH)
+_dummy_input = np.zeros((1, N_LFCC, target_length, 1), dtype=np.float32)
+_ = model(_dummy_input, training=False)
+print("Model ready!")
 
 # ============== FastAPI App ==============
 app = FastAPI(
@@ -65,16 +82,17 @@ class ErrorResponse(BaseModel):
     message: str
 
 # ============== Feature Extraction ==============
-def extract_lfcc(audio_path, sr=SAMPLE_RATE, n_lfcc=N_LFCC, 
+def extract_lfcc_from_bytes(audio_bytes, sr=SAMPLE_RATE, n_lfcc=N_LFCC, 
                  n_fft=N_FFT, hop_length=HOP_LENGTH, max_duration=MAX_DURATION):
     """
-    Extract LFCC-style cepstral features from audio file.
+    Extract LFCC-style cepstral features from audio bytes (in-memory).
     Uses MFCC computation for practical spoofing detection.
     Returns a fixed-size feature matrix.
     """
     try:
-        # Load audio
-        y, sr = librosa.load(audio_path, sr=sr, duration=max_duration)
+        # Load audio from bytes (no disk I/O)
+        audio_buffer = io.BytesIO(audio_bytes)
+        y, sr = librosa.load(audio_buffer, sr=sr, duration=max_duration)
         
         # Compute LFCC-style cepstral features
         lfcc = librosa.feature.mfcc(
@@ -99,15 +117,15 @@ def extract_lfcc(audio_path, sr=SAMPLE_RATE, n_lfcc=N_LFCC,
         return lfcc
     except Exception as e:
         print(f"Error processing audio: {e}")
-        target_length = int(max_duration * sr / hop_length)
+        target_length = int(max_duration * SAMPLE_RATE / hop_length)
         return np.zeros((n_lfcc, target_length))
 
-def preprocess_audio(audio_path):
+def preprocess_audio_bytes(audio_bytes):
     """
     Extract LFCC-style cepstral features and prepare for model input.
     """
-    # Extract LFCC-style features
-    features = extract_lfcc(audio_path)
+    # Extract LFCC-style features from bytes
+    features = extract_lfcc_from_bytes(audio_bytes)
     
     # Normalize using saved parameters
     if MEAN is not None and STD is not None:
@@ -186,41 +204,30 @@ async def detect_voice(
         # Decode base64 audio
         audio_bytes = base64.b64decode(request.audioBase64)
         
-        # Save to temporary file
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp_file:
-            tmp_file.write(audio_bytes)
-            tmp_path = tmp_file.name
+        # Preprocess audio (in-memory, no disk I/O)
+        features = preprocess_audio_bytes(audio_bytes)
         
-        try:
-            # Preprocess audio
-            features = preprocess_audio(tmp_path)
-            
-            # Run inference
-            prediction = model.predict(features, verbose=0)[0][0]
-            
-            # Determine classification
-            # Model output: 0 = HUMAN, 1 = AI_GENERATED (or adjust based on your training)
-            is_ai = prediction >= 0.5
-            classification = "AI_GENERATED" if is_ai else "HUMAN"
-            
-            # Confidence score (distance from decision boundary)
-            confidence_score = float(prediction) if is_ai else float(1 - prediction)
-            
-            # Generate explanation
-            explanation = generate_explanation(confidence_score, is_ai)
-            
-            return VoiceDetectionResponse(
-                status="success",
-                language=request.language,
-                classification=classification,
-                confidenceScore=round(confidence_score, 2),
-                explanation=explanation
-            )
-            
-        finally:
-            # Clean up temp file
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
+        # Run inference using model.__call__ (faster than predict())
+        prediction = model(features, training=False)[0][0].numpy()
+        
+        # Determine classification
+        # Model output: 0 = HUMAN, 1 = AI_GENERATED (or adjust based on your training)
+        is_ai = prediction >= 0.5
+        classification = "AI_GENERATED" if is_ai else "HUMAN"
+        
+        # Confidence score (distance from decision boundary)
+        confidence_score = float(prediction) if is_ai else float(1 - prediction)
+        
+        # Generate explanation
+        explanation = generate_explanation(confidence_score, is_ai)
+        
+        return VoiceDetectionResponse(
+            status="success",
+            language=request.language,
+            classification=classification,
+            confidenceScore=round(confidence_score, 2),
+            explanation=explanation
+        )
                 
     except base64.binascii.Error:
         raise HTTPException(
