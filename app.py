@@ -40,30 +40,17 @@ MAX_DURATION = 10.0  # seconds (flexible input, always output 312 steps)
 
 SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
 
-# Choose TFLite or Keras model based on availability
-USE_TFLITE = os.path.exists("model/model.tflite")
-
 # ============== Load Model ==============
-if USE_TFLITE:
-    print("Loading TFLite model (optimized for CPU)...")
-    interpreter = tf.lite.Interpreter(model_path="model/model.tflite")
-    interpreter.allocate_tensors()
-    input_details = interpreter.get_input_details()
-    output_details = interpreter.get_output_details()
-    print(f"TFLite model loaded! Input shape: {input_details[0]['shape']}")
-    model = None  # Not using Keras model
-else:
-    print("Loading Keras model...")
-    model = keras.models.load_model("model/model.h5", compile=False)
-    model.trainable = False  # Disable training layers for inference
-    print("Model loaded successfully!")
-    
-    # Pre-warm model (first inference is slow due to graph compilation)
-    print("Warming up model...")
-    _dummy_input = np.zeros((1, N_LFCC, TARGET_TIME_STEPS, 1), dtype=np.float32)
-    _ = model(_dummy_input, training=False)
-    print("Model ready!")
-    interpreter = None  # Not using TFLite
+print("Loading Keras model...")
+model = keras.models.load_model("model/model.h5", compile=False)
+model.trainable = False  # Disable training layers for inference
+print("Model loaded successfully!")
+
+# Pre-warm model (first inference is slow due to graph compilation)
+print("Warming up model...")
+_dummy_input = np.zeros((1, N_LFCC, TARGET_TIME_STEPS, 1), dtype=np.float32)
+_ = model(_dummy_input, training=False)
+print("Model ready!")
 
 # Load normalization parameters
 print("Loading normalization parameters...")
@@ -181,11 +168,10 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    model_status = "tflite" if USE_TFLITE else "keras"
     return {
         "status": "healthy",
-        "model_loaded": True,
-        "model_type": model_status
+        "model_loaded": model is not None,
+        "model_type": "keras"
     }
 
 @app.post("/api/voice-detection", response_model=VoiceDetectionResponse)
@@ -224,15 +210,8 @@ async def detect_voice(
         # Preprocess audio (in-memory, no disk I/O)
         features = preprocess_audio_bytes(audio_bytes)
         
-        # Run inference
-        if USE_TFLITE:
-            # TFLite inference (2-3x faster than Keras)
-            interpreter.set_tensor(input_details[0]['index'], features)
-            interpreter.invoke()
-            prediction = interpreter.get_tensor(output_details[0]['index'])[0][0]
-        else:
-            # Keras inference
-            prediction = model(features, training=False)[0][0].numpy()
+        # Run Keras inference
+        prediction = model(features, training=False)[0][0].numpy()
         
         # Determine classification
         # Model output: 0 = HUMAN, 1 = AI_GENERATED (or adjust based on your training)
