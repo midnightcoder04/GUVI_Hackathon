@@ -33,7 +33,8 @@ SAMPLE_RATE = 22050
 N_LFCC = 40
 N_FFT = 2048
 HOP_LENGTH = 512
-MAX_DURATION = 5.0  # seconds
+# Model expects exactly 312 time steps: calculated as 312 * 512 / 22050
+MAX_DURATION = 312 * HOP_LENGTH / SAMPLE_RATE  # ≈7.245 seconds
 
 SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
 
