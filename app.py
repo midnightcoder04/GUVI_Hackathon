@@ -33,8 +33,10 @@ SAMPLE_RATE = 22050
 N_LFCC = 40
 N_FFT = 2048
 HOP_LENGTH = 512
-# Model expects exactly 312 time steps: calculated as 312 * 512 / 22050
-MAX_DURATION = 312 * HOP_LENGTH / SAMPLE_RATE  # ≈7.245 seconds
+# Model expects exactly 312 time steps (fixed)
+TARGET_TIME_STEPS = 312
+# Allow longer audio input, we'll pad/truncate to exactly 312 steps
+MAX_DURATION = 10.0  # seconds (flexible input, always output 312 steps)
 
 SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
 
@@ -58,8 +60,7 @@ else:
     
     # Pre-warm model (first inference is slow due to graph compilation)
     print("Warming up model...")
-    target_length = int(MAX_DURATION * SAMPLE_RATE / HOP_LENGTH)
-    _dummy_input = np.zeros((1, N_LFCC, target_length, 1), dtype=np.float32)
+    _dummy_input = np.zeros((1, N_LFCC, TARGET_TIME_STEPS, 1), dtype=np.float32)
     _ = model(_dummy_input, training=False)
     print("Model ready!")
     interpreter = None  # Not using TFLite
@@ -101,7 +102,7 @@ def extract_lfcc_from_bytes(audio_bytes, sr=SAMPLE_RATE, n_lfcc=N_LFCC,
     """
     Extract LFCC-style cepstral features from audio bytes (in-memory).
     Uses MFCC computation for practical spoofing detection.
-    Returns a fixed-size feature matrix.
+    Always returns exactly 312 time steps (model requirement).
     """
     try:
         # Load audio from bytes (no disk I/O)
@@ -117,22 +118,19 @@ def extract_lfcc_from_bytes(audio_bytes, sr=SAMPLE_RATE, n_lfcc=N_LFCC,
             hop_length=hop_length
         )
         
-        # Standardize to fixed length (pad or truncate)
-        target_length = int(max_duration * sr / hop_length)
-        
-        if lfcc.shape[1] < target_length:
-            # Pad
-            pad_width = target_length - lfcc.shape[1]
+        # Always pad or truncate to exactly TARGET_TIME_STEPS (312)
+        if lfcc.shape[1] < TARGET_TIME_STEPS:
+            # Pad with zeros
+            pad_width = TARGET_TIME_STEPS - lfcc.shape[1]
             lfcc = np.pad(lfcc, ((0, 0), (0, pad_width)), mode='constant')
         else:
-            # Truncate
-            lfcc = lfcc[:, :target_length]
+            # Truncate to exactly 312 steps
+            lfcc = lfcc[:, :TARGET_TIME_STEPS]
         
         return lfcc
     except Exception as e:
         print(f"Error processing audio: {e}")
-        target_length = int(max_duration * SAMPLE_RATE / hop_length)
-        return np.zeros((n_lfcc, target_length))
+        return np.zeros((n_lfcc, TARGET_TIME_STEPS))
 
 def preprocess_audio_bytes(audio_bytes):
     """
