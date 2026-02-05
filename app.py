@@ -152,34 +152,16 @@ def extract_lfcc_from_bytes(audio_bytes, sr=SAMPLE_RATE, n_lfcc=N_LFCC,
     """
     try:
         # Load audio from bytes (no disk I/O)
-        # Use explicit parameters to match training
         audio_buffer = io.BytesIO(audio_bytes)
-        y, sr = librosa.load(
-            audio_buffer, 
-            sr=sr, 
-            duration=max_duration,
-            mono=True,  # Ensure mono
-            res_type='kaiser_best'  # High-quality resampling
-        )
+        y, sr = librosa.load(audio_buffer, sr=sr, duration=max_duration)
         
-        # Ensure audio is not empty
-        if len(y) == 0:
-            raise ValueError("Empty audio file")
-        
-        # Compute LFCC-style cepstral features
-        # Use explicit parameters to match training
+        # Compute LFCC-style cepstral features (matching training exactly)
         lfcc = librosa.feature.mfcc(
             y=y, 
             sr=sr, 
             n_mfcc=n_lfcc,
             n_fft=n_fft,
-            hop_length=hop_length,
-            n_mels=128,  # Default, but explicit
-            fmin=0.0,
-            fmax=None,  # sr/2
-            htk=False,  # Use slaney-style mel
-            norm='slaney',  # Mel band normalization
-            dtype=np.float32  # Consistent dtype from start
+            hop_length=hop_length
         )
         
         # Always pad or truncate to exactly TARGET_TIME_STEPS (312)
@@ -207,9 +189,21 @@ def preprocess_audio_bytes(audio_bytes):
     # Ensure float32 dtype before normalization
     features = features.astype(np.float32)
     
-    # Normalize using saved parameters (global mean/std)
+    # Normalize using saved parameters (feature-wise normalization)
     if MEAN is not None and STD is not None:
-        features = (features - float(MEAN)) / (float(STD) + 1e-8)
+        # Ensure MEAN and STD are broadcastable to features shape
+        # features shape: (n_lfcc, time_steps) = (40, 312)
+        # MEAN/STD should be (40, 1) or (40, 312)
+        mean = np.array(MEAN, dtype=np.float32)
+        std = np.array(STD, dtype=np.float32)
+        
+        # Reshape if needed for feature-wise normalization
+        if mean.ndim == 1:
+            mean = mean[:, np.newaxis]  # (40,) -> (40, 1)
+        if std.ndim == 1:
+            std = std[:, np.newaxis]    # (40,) -> (40, 1)
+            
+        features = (features - mean) / (std + 1e-8)
     
     # Reshape for CNN input: (batch, height, width, channels)
     features = features[np.newaxis, ..., np.newaxis]
