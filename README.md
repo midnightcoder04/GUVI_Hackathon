@@ -9,7 +9,7 @@ A REST API that detects whether a voice sample is AI-generated or Human, support
 git init
 git add .
 git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/voice-detection-api.git
+git remote add origin https://github.com/midnightcoder04/GUVI_hackathon.git
 git push -u origin main
 ```
 
@@ -24,13 +24,13 @@ git push -u origin main
    - Value: Your secret API key (e.g., `sk_your_secret_key_here`)
 7. Click **Create Web Service**
 
-Your API will be live at: `https://your-app-name.onrender.com`
+Your API will be live at: `https://guvi-hackathon-ohac.onrender.com`
 
 ## API Usage
 
 ### Endpoint
 ```
-POST https://your-app-name.onrender.com/api/voice-detection
+POST https://guvi-hackathon-ohac.onrender.com/api/voice-detection
 ```
 
 ### Headers
@@ -50,7 +50,7 @@ x-api-key: YOUR_API_KEY
 
 ### cURL Example
 ```bash
-curl -X POST https://your-app-name.onrender.com/api/voice-detection \
+curl -X POST https://guvi-hackathon-ohac.onrender.com/api/voice-detection \
   -H "Content-Type: application/json" \
   -H "x-api-key: sk_your_secret_key_here" \
   -d '{

@@ -152,16 +152,34 @@ def extract_lfcc_from_bytes(audio_bytes, sr=SAMPLE_RATE, n_lfcc=N_LFCC,
     """
     try:
         # Load audio from bytes (no disk I/O)
+        # Use explicit parameters to match training
         audio_buffer = io.BytesIO(audio_bytes)
-        y, sr = librosa.load(audio_buffer, sr=sr, duration=max_duration)
+        y, sr = librosa.load(
+            audio_buffer, 
+            sr=sr, 
+            duration=max_duration,
+            mono=True,  # Ensure mono
+            res_type='kaiser_best'  # High-quality resampling
+        )
+        
+        # Ensure audio is not empty
+        if len(y) == 0:
+            raise ValueError("Empty audio file")
         
         # Compute LFCC-style cepstral features
+        # Use explicit parameters to match training
         lfcc = librosa.feature.mfcc(
             y=y, 
             sr=sr, 
             n_mfcc=n_lfcc,
             n_fft=n_fft,
-            hop_length=hop_length
+            hop_length=hop_length,
+            n_mels=128,  # Default, but explicit
+            fmin=0.0,
+            fmax=None,  # sr/2
+            htk=False,  # Use slaney-style mel
+            norm='slaney',  # Mel band normalization
+            dtype=np.float32  # Consistent dtype from start
         )
         
         # Always pad or truncate to exactly TARGET_TIME_STEPS (312)
@@ -176,21 +194,22 @@ def extract_lfcc_from_bytes(audio_bytes, sr=SAMPLE_RATE, n_lfcc=N_LFCC,
         return lfcc
     except Exception as e:
         print(f"Error processing audio: {e}")
-        return np.zeros((n_lfcc, TARGET_TIME_STEPS))
+        return np.zeros((n_lfcc, TARGET_TIME_STEPS), dtype=np.float32)
 
 def preprocess_audio_bytes(audio_bytes):
     """
     Extract LFCC-style cepstral features and prepare for model input.
+    Matches exact preprocessing used during training.
     """
     # Extract LFCC-style features from bytes
     features = extract_lfcc_from_bytes(audio_bytes)
     
-    # Normalize using saved parameters
-    if MEAN is not None and STD is not None:
-        features = (features - MEAN) / (STD + 1e-8)
-    
-    # Convert to float32 for efficient CPU inference
+    # Ensure float32 dtype before normalization
     features = features.astype(np.float32)
+    
+    # Normalize using saved parameters (global mean/std)
+    if MEAN is not None and STD is not None:
+        features = (features - float(MEAN)) / (float(STD) + 1e-8)
     
     # Reshape for CNN input: (batch, height, width, channels)
     features = features[np.newaxis, ..., np.newaxis]
@@ -272,8 +291,12 @@ async def detect_voice(
         # Run Keras inference
         prediction = model(features, training=False)[0][0].numpy()
         
+        # Log prediction for debugging
+        print(f"Raw prediction: {prediction:.4f}, Language: {request.language}")
+        
         # Determine classification
-        # Model output: 0 = HUMAN, 1 = AI_GENERATED (or adjust based on your training)
+        # Model output: higher value = more likely AI_GENERATED
+        # Note: Adjust threshold or flip logic if accuracy is consistently inverted
         is_ai = prediction >= 0.5
         classification = "AI_GENERATED" if is_ai else "HUMAN"
         
