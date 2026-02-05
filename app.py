@@ -29,7 +29,8 @@ SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
 
 # ============== Load Model ==============
 print("Loading model...")
-model = keras.models.load_model("model/model.h5")
+model = keras.models.load_model("model/model.h5", compile=False)
+model.trainable = False  # Disable training layers for inference
 print("Model loaded successfully!")
 
 # Load normalization parameters
@@ -67,14 +68,15 @@ class ErrorResponse(BaseModel):
 def extract_lfcc(audio_path, sr=SAMPLE_RATE, n_lfcc=N_LFCC, 
                  n_fft=N_FFT, hop_length=HOP_LENGTH, max_duration=MAX_DURATION):
     """
-    Extract LFCC features from audio file.
+    Extract LFCC-style cepstral features from audio file.
+    Uses MFCC computation for practical spoofing detection.
     Returns a fixed-size feature matrix.
     """
     try:
         # Load audio
         y, sr = librosa.load(audio_path, sr=sr, duration=max_duration)
         
-        # Compute LFCC (using MFCC with linear frequency spacing)
+        # Compute LFCC-style cepstral features
         lfcc = librosa.feature.mfcc(
             y=y, 
             sr=sr, 
@@ -102,14 +104,17 @@ def extract_lfcc(audio_path, sr=SAMPLE_RATE, n_lfcc=N_LFCC,
 
 def preprocess_audio(audio_path):
     """
-    Extract features and prepare for model input.
+    Extract LFCC-style cepstral features and prepare for model input.
     """
-    # Extract LFCC features
+    # Extract LFCC-style features
     features = extract_lfcc(audio_path)
     
     # Normalize using saved parameters
     if MEAN is not None and STD is not None:
         features = (features - MEAN) / (STD + 1e-8)
+    
+    # Convert to float32 for efficient CPU inference
+    features = features.astype(np.float32)
     
     # Reshape for CNN input: (batch, height, width, channels)
     features = features[np.newaxis, ..., np.newaxis]

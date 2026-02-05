@@ -4,8 +4,8 @@ uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 
 # ML/Audio processing
-# TensorFlow 2.13 is the last version with Keras 2.x (model compatibility)
-tensorflow==2.13.0
+# TensorFlow CPU build (smaller image, faster startup on Render)
+tensorflow-cpu==2.13.*
 librosa==0.10.1
 numpy==1.24.3
 soundfile==0.12.1
