@@ -40,11 +40,70 @@ MAX_DURATION = 10.0  # seconds (flexible input, always output 312 steps)
 
 SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
 
+# ============== Model Architecture ==============
+def build_cnn_model(input_shape=(N_LFCC, TARGET_TIME_STEPS, 1)):
+    """
+    CNN architecture for voice classification.
+    Rebuilds the model to avoid Keras version compatibility issues.
+    """
+    from tensorflow.keras import layers, Model
+    
+    inputs = layers.Input(shape=input_shape, name='input')
+    
+    # Block 1
+    x = layers.Conv2D(32, (3, 3), padding='same', name='conv1')(inputs)
+    x = layers.BatchNormalization(name='bn1')(x)
+    x = layers.Activation('relu', name='relu1')(x)
+    x = layers.MaxPooling2D((2, 2), name='pool1')(x)
+    x = layers.Dropout(0.25, name='dropout1')(x)
+    
+    # Block 2
+    x = layers.Conv2D(64, (3, 3), padding='same', name='conv2')(x)
+    x = layers.BatchNormalization(name='bn2')(x)
+    x = layers.Activation('relu', name='relu2')(x)
+    x = layers.MaxPooling2D((2, 2), name='pool2')(x)
+    x = layers.Dropout(0.25, name='dropout2')(x)
+    
+    # Block 3
+    x = layers.Conv2D(128, (3, 3), padding='same', name='conv3')(x)
+    x = layers.BatchNormalization(name='bn3')(x)
+    x = layers.Activation('relu', name='relu3')(x)
+    x = layers.MaxPooling2D((2, 2), name='pool3')(x)
+    x = layers.Dropout(0.25, name='dropout3')(x)
+    
+    # Block 4
+    x = layers.Conv2D(256, (3, 3), padding='same', name='conv4')(x)
+    x = layers.BatchNormalization(name='bn4')(x)
+    x = layers.Activation('relu', name='relu4')(x)
+    x = layers.GlobalAveragePooling2D(name='gap')(x)
+    
+    # Dense layers
+    x = layers.Dense(128, activation='relu', name='dense1')(x)
+    x = layers.Dropout(0.5, name='dropout4')(x)
+    x = layers.Dense(64, activation='relu', name='dense2')(x)
+    x = layers.Dropout(0.5, name='dropout5')(x)
+    
+    # Output
+    outputs = layers.Dense(1, activation='sigmoid', name='output')(x)
+    
+    model = Model(inputs=inputs, outputs=outputs, name='VoiceClassifierCNN')
+    return model
+
 # ============== Load Model ==============
 print("Loading Keras model...")
-model = keras.models.load_model("model/model.h5", compile=False)
+try:
+    # Try direct loading first
+    model = keras.models.load_model("model/model.h5", compile=False)
+    print("Model loaded directly!")
+except Exception as e:
+    print(f"Direct loading failed: {e}")
+    print("Rebuilding model from architecture and loading weights...")
+    # Rebuild architecture and load weights (Keras 2.x/3.x compatibility)
+    model = build_cnn_model()
+    model.load_weights("model/model.h5")
+    print("Model loaded via weight loading!")
+
 model.trainable = False  # Disable training layers for inference
-print("Model loaded successfully!")
 
 # Pre-warm model (first inference is slow due to graph compilation)
 print("Warming up model...")
