@@ -12,8 +12,10 @@ from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional
+
+# Use TensorFlow's built-in Keras (compatible with TF 2.13)
 import tensorflow as tf
-from tensorflow import keras
+keras = tf.keras
 
 # ============== Configuration ==============
 API_KEY = os.environ.get("API_KEY", "sk_test_123456789")  # Set in Render environment
@@ -21,7 +23,7 @@ SAMPLE_RATE = 22050
 N_LFCC = 40
 N_FFT = 2048
 HOP_LENGTH = 512
-MAX_DURATION = 5.0  # seconds
+MAX_DURATION = 10.0  # seconds
 
 SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
 
