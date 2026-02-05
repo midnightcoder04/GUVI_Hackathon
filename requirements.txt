@@ -1,0 +1,13 @@
+# Core API framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# ML/Audio processing
+tensorflow==2.15.0
+librosa==0.10.1
+numpy==1.24.3
+soundfile==0.12.1
+
+# Utilities
+pydantic==2.5.2
