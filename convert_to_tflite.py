@@ -9,9 +9,64 @@ Usage:
 import tensorflow as tf
 import numpy as np
 
-# Load the original model
 print("Loading Keras model...")
-model = tf.keras.models.load_model("model/model.h5", compile=False)
+
+# Use TF 2.13's Keras which has better legacy compatibility
+import os
+os.environ['TF_USE_LEGACY_KERAS'] = '1'
+
+try:
+    # Try loading with TF's Keras directly
+    model = tf.keras.models.load_model("model/model.h5", compile=False)
+except Exception as e:
+    print(f"Error with standard loading: {e}")
+    print("Trying alternative loading method...")
+    
+    # Alternative: Load weights only and reconstruct model
+    # This requires knowing your model architecture
+    from tensorflow.keras import layers, Model
+    
+    # Reconstruct the CNN architecture from README
+    def build_cnn_model(input_shape=(40, 312, 1)):
+        inputs = layers.Input(shape=input_shape, name='input')
+        
+        x = layers.Conv2D(32, (3, 3), padding='same', name='conv1')(inputs)
+        x = layers.BatchNormalization(name='bn1')(x)
+        x = layers.Activation('relu', name='relu1')(x)
+        x = layers.MaxPooling2D((2, 2), name='pool1')(x)
+        x = layers.Dropout(0.25, name='dropout1')(x)
+        
+        x = layers.Conv2D(64, (3, 3), padding='same', name='conv2')(x)
+        x = layers.BatchNormalization(name='bn2')(x)
+        x = layers.Activation('relu', name='relu2')(x)
+        x = layers.MaxPooling2D((2, 2), name='pool2')(x)
+        x = layers.Dropout(0.25, name='dropout2')(x)
+        
+        x = layers.Conv2D(128, (3, 3), padding='same', name='conv3')(x)
+        x = layers.BatchNormalization(name='bn3')(x)
+        x = layers.Activation('relu', name='relu3')(x)
+        x = layers.MaxPooling2D((2, 2), name='pool3')(x)
+        x = layers.Dropout(0.25, name='dropout3')(x)
+        
+        x = layers.Conv2D(256, (3, 3), padding='same', name='conv4')(x)
+        x = layers.BatchNormalization(name='bn4')(x)
+        x = layers.Activation('relu', name='relu4')(x)
+        x = layers.GlobalAveragePooling2D(name='gap')(x)
+        
+        x = layers.Dense(128, activation='relu', name='dense1')(x)
+        x = layers.Dropout(0.5, name='dropout4')(x)
+        x = layers.Dense(64, activation='relu', name='dense2')(x)
+        x = layers.Dropout(0.5, name='dropout5')(x)
+        
+        outputs = layers.Dense(1, activation='sigmoid', name='output')(x)
+        
+        model = Model(inputs=inputs, outputs=outputs, name='VoiceClassifierCNN')
+        return model
+    
+    model = build_cnn_model()
+    model.load_weights("model/model.h5")
+    print("Model loaded via weight loading")
+
 print(f"Model input shape: {model.input_shape}")
 
 # Convert to TFLite

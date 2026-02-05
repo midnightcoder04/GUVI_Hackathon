@@ -37,11 +37,31 @@ MAX_DURATION = 5.0  # seconds
 
 SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
 
+# Choose TFLite or Keras model based on availability
+USE_TFLITE = os.path.exists("model/model.tflite")
+
 # ============== Load Model ==============
-print("Loading model...")
-model = keras.models.load_model("model/model.h5", compile=False)
-model.trainable = False  # Disable training layers for inference
-print("Model loaded successfully!")
+if USE_TFLITE:
+    print("Loading TFLite model (optimized for CPU)...")
+    interpreter = tf.lite.Interpreter(model_path="model/model.tflite")
+    interpreter.allocate_tensors()
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    print(f"TFLite model loaded! Input shape: {input_details[0]['shape']}")
+    model = None  # Not using Keras model
+else:
+    print("Loading Keras model...")
+    model = keras.models.load_model("model/model.h5", compile=False)
+    model.trainable = False  # Disable training layers for inference
+    print("Model loaded successfully!")
+    
+    # Pre-warm model (first inference is slow due to graph compilation)
+    print("Warming up model...")
+    target_length = int(MAX_DURATION * SAMPLE_RATE / HOP_LENGTH)
+    _dummy_input = np.zeros((1, N_LFCC, target_length, 1), dtype=np.float32)
+    _ = model(_dummy_input, training=False)
+    print("Model ready!")
+    interpreter = None  # Not using TFLite
 
 # Load normalization parameters
 print("Loading normalization parameters...")
@@ -49,13 +69,6 @@ norm_params = np.load("model/normalization_params.npz")
 MEAN = norm_params.get("mean", None)
 STD = norm_params.get("std", None)
 print("Normalization parameters loaded!")
-
-# Pre-warm model (first inference is slow due to graph compilation)
-print("Warming up model...")
-target_length = int(MAX_DURATION * SAMPLE_RATE / HOP_LENGTH)
-_dummy_input = np.zeros((1, N_LFCC, target_length, 1), dtype=np.float32)
-_ = model(_dummy_input, training=False)
-print("Model ready!")
 
 # ============== FastAPI App ==============
 app = FastAPI(
@@ -169,7 +182,12 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "model_loaded": model is not None}
+    model_status = "tflite" if USE_TFLITE else "keras"
+    return {
+        "status": "healthy",
+        "model_loaded": True,
+        "model_type": model_status
+    }
 
 @app.post("/api/voice-detection", response_model=VoiceDetectionResponse)
 async def detect_voice(
@@ -207,8 +225,15 @@ async def detect_voice(
         # Preprocess audio (in-memory, no disk I/O)
         features = preprocess_audio_bytes(audio_bytes)
         
-        # Run inference using model.__call__ (faster than predict())
-        prediction = model(features, training=False)[0][0].numpy()
+        # Run inference
+        if USE_TFLITE:
+            # TFLite inference (2-3x faster than Keras)
+            interpreter.set_tensor(input_details[0]['index'], features)
+            interpreter.invoke()
+            prediction = interpreter.get_tensor(output_details[0]['index'])[0][0]
+        else:
+            # Keras inference
+            prediction = model(features, training=False)[0][0].numpy()
         
         # Determine classification
         # Model output: 0 = HUMAN, 1 = AI_GENERATED (or adjust based on your training)
