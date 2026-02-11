@@ -176,7 +176,11 @@ class TFLiteModel:
         # Handle INT8 input
         if self.input_details[0]['dtype'] == np.uint8:
             scale, zero_point = self.input_details[0]['quantization']
-            features_quant = (features / scale + zero_point).astype(np.uint8)
+            # Quantize with proper clipping to avoid invalid values
+            features_quant = features / scale + zero_point
+            # Clip to valid uint8 range and handle NaN/Inf
+            features_quant = np.nan_to_num(features_quant, nan=0.0, posinf=255.0, neginf=0.0)
+            features_quant = np.clip(features_quant, 0, 255).astype(np.uint8)
             self.interpreter.set_tensor(self.input_details[0]['index'], features_quant)
         else:
             self.interpreter.set_tensor(self.input_details[0]['index'], features)
@@ -467,11 +471,10 @@ def main():
     # Model configurations
     models_to_test = [
         ("model/model.h5", "Keras H5", "keras"),
-        ("model/model_fp32.tflite", "TFLite FP32", "tflite"),
         ("model/model_int8.tflite", "TFLite INT8", "tflite"),
         ("model/model_int8_hybrid.tflite", "TFLite INT8 Hybrid", "tflite"),
         ("model/model_xgboost.json", "XGBoost JSON", "xgboost"),
-        ("model/model_xgboost_5depth.json", "XGBoost JSON", "xgboost"),
+        ("model/model_xgboost_depth4.json", "XGBoost JSON LITE", "xgboost"),
         ("model/model_xgboost.ubj", "XGBoost UBJ", "xgboost"),
         ("model/model_xgboost.pkl", "XGBoost PKL", "xgboost"),
     ]

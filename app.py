@@ -31,7 +31,7 @@ keras = tf.keras
 API_KEY = os.environ.get("API_KEY", "sk_test_123456789")  # Set in Render environment
 
 # Model backend selection: "keras", "tflite_int8"
-MODEL_BACKEND = os.environ.get("MODEL_BACKEND", "keras")
+MODEL_BACKEND = os.environ.get("MODEL_BACKEND", "tflite_int8").lower()
 
 SAMPLE_RATE = 16000  # Must match training sample rate
 N_LFCC = 40
@@ -313,7 +313,12 @@ async def detect_voice(
             # Handle INT8 input quantization
             if input_details[0]['dtype'] == np.uint8:
                 scale, zero_point = input_details[0]['quantization']
-                input_data = (features / scale + zero_point).astype(np.uint8)
+                # Quantize and clip to valid uint8 range [0, 255]
+                # Without clipping, values outside the representable range
+                # wrap via modular arithmetic, corrupting the input
+                input_data = features / scale + zero_point
+                input_data = np.nan_to_num(input_data, nan=0.0, posinf=255.0, neginf=0.0)
+                input_data = np.clip(input_data, 0, 255).astype(np.uint8)
             else:
                 input_data = features.astype(input_details[0]['dtype'])
             
