@@ -6,6 +6,7 @@ python-multipart==0.0.6
 # ML/Audio processing
 # TensorFlow CPU build (smaller image, faster startup on Render)
 tensorflow-cpu==2.13.*
+xgboost==2.0.3
 librosa==0.10.1
 numpy==1.24.3
 soundfile==0.12.1
