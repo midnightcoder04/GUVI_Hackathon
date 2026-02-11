@@ -31,3 +31,6 @@ Thumbs.db
 # Temp files
 *.tmp
 .ipynb_checkpoints/
+
+# Dataset
+build/

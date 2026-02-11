@@ -29,15 +29,25 @@ keras = tf.keras
 
 # ============== Configuration ==============
 API_KEY = os.environ.get("API_KEY", "sk_test_123456789")  # Set in Render environment
-SAMPLE_RATE = 16000  # Match training sample rate
+
+# Model backend selection: "keras", "tflite_fp32", "tflite_int8"
+MODEL_BACKEND = os.environ.get("MODEL_BACKEND", "tflite_int8")
+
+SAMPLE_RATE = 16000  # Must match training sample rate
 N_LFCC = 40
 N_FFT = 2048
 HOP_LENGTH = 512
-# Allow longer audio input, we'll pad/truncate to exactly 312 steps
+TARGET_TIME_STEPS = 312  # Fixed by model architecture
 MAX_DURATION = 10.0  # seconds (flexible input, always output 312 steps)
-TARGET_TIME_STEPS = int(MAX_DURATION * SAMPLE_RATE / HOP_LENGTH)  # = 313
 
 SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
+
+# Model paths
+MODEL_PATHS = {
+    "keras": "model/model.h5",
+    "tflite_int8": "model/model_int8.tflite",
+    "tflite_int8_hybrid": "model/model_int8_hybrid.tflite"
+}
 
 # ============== Model Architecture ==============
 def build_cnn_model(input_shape=(N_LFCC, TARGET_TIME_STEPS, 1)):
@@ -89,26 +99,47 @@ def build_cnn_model(input_shape=(N_LFCC, TARGET_TIME_STEPS, 1)):
     return model
 
 # ============== Load Model ==============
-print("Loading Keras model...")
-try:
-    # Try direct loading first
-    model = keras.models.load_model("model/model.h5", compile=False)
-    print("Model loaded directly!")
-except Exception as e:
-    print(f"Direct loading failed: {e}")
-    print("Rebuilding model from architecture and loading weights...")
-    # Rebuild architecture and load weights (Keras 2.x/3.x compatibility)
-    model = build_cnn_model()
-    model.load_weights("model/model.h5")
-    print("Model loaded via weight loading!")
+print(f"Loading model with backend: {MODEL_BACKEND}")
+model_path = MODEL_PATHS.get(MODEL_BACKEND, MODEL_PATHS["keras"])
 
-model.trainable = False  # Disable training layers for inference
+if not os.path.exists(model_path):
+    print(f"⚠ Model not found: {model_path}, falling back to Keras")
+    MODEL_BACKEND = "keras"
+    model_path = MODEL_PATHS["keras"]
 
-# Pre-warm model (first inference is slow due to graph compilation)
-print("Warming up model...")
-_dummy_input = np.zeros((1, N_LFCC, TARGET_TIME_STEPS, 1), dtype=np.float32)
-_ = model(_dummy_input, training=False)
-print("Model ready!")
+model = None
+interpreter = None
+input_details = None
+output_details = None
+
+if MODEL_BACKEND.startswith("tflite"):
+    # Load TFLite model
+    print(f"Loading TFLite model: {model_path}")
+    interpreter = tf.lite.Interpreter(model_path=model_path)
+    interpreter.allocate_tensors()
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    print(f"✓ TFLite model loaded: {input_details[0]['shape']}")
+else:
+    # Load Keras model
+    print(f"Loading Keras model: {model_path}")
+    try:
+        model = keras.models.load_model(model_path, compile=False)
+        print("✓ Model loaded directly")
+    except Exception as e:
+        print(f"Direct loading failed: {e}")
+        print("Rebuilding from architecture...")
+        model = build_cnn_model()
+        model.load_weights(model_path)
+        print("✓ Model loaded via weights")
+    
+    model.trainable = False
+    
+    # Pre-warm model
+    print("Warming up model...")
+    _dummy_input = np.zeros((1, N_LFCC, TARGET_TIME_STEPS, 1), dtype=np.float32)
+    _ = model(_dummy_input, training=False)
+    print("✓ Model ready")
 
 # Load normalization parameters
 print("Loading normalization parameters...")
@@ -270,11 +301,26 @@ async def detect_voice(
         # Preprocess audio (in-memory, no disk I/O)
         features = preprocess_audio_bytes(audio_bytes)
         
-        # Run Keras inference
-        prediction = model(features, training=False)[0][0].numpy()
+        # Run inference based on model backend
+        if MODEL_BACKEND.startswith("tflite"):
+            # TFLite inference
+            input_data = features.astype(input_details[0]['dtype'])
+            interpreter.set_tensor(input_details[0]['index'], input_data)
+            interpreter.invoke()
+            output_data = interpreter.get_tensor(output_details[0]['index'])
+            
+            # Handle INT8 quantization if needed
+            if output_details[0]['dtype'] == np.uint8:
+                scale, zero_point = output_details[0]['quantization']
+                output_data = (output_data.astype(np.float32) - zero_point) * scale
+            
+            prediction = float(output_data[0][0])
+        else:
+            # Keras inference
+            prediction = model(features, training=False)[0][0].numpy()
         
         # Log prediction for debugging
-        print(f"Raw prediction: {prediction:.4f}, Language: {request.language}")
+        print(f"Raw prediction: {prediction:.4f}, Backend: {MODEL_BACKEND}, Language: {request.language}")
         
         # Determine classification
         # Model output: higher value = more likely AI_GENERATED
