@@ -144,9 +144,9 @@ else:
 # Load normalization parameters
 print("Loading normalization parameters...")
 norm_params = np.load("model/normalization_params.npz")
-MEAN = float(norm_params.get("mean", None))
-STD = float(norm_params.get("std", None))
-print("Normalization parameters loaded!")
+MEAN = np.array(norm_params['mean'], dtype=np.float32)
+STD = np.array(norm_params['std'], dtype=np.float32)
+print(f"Normalization parameters loaded! Shape: MEAN={MEAN.shape}, STD={STD.shape}")
 
 # ============== FastAPI App ==============
 app = FastAPI(
@@ -220,9 +220,15 @@ def preprocess_audio_bytes(audio_bytes):
     features = features.astype(np.float32)
     
     # Normalize using saved parameters (feature-wise normalization)
-    features = (features - MEAN) / (STD + 1e-8)
-
-
+    # MEAN and STD are arrays of shape (40,), need to broadcast correctly
+    mean = MEAN
+    std = STD
+    if mean.ndim == 1:
+        mean = mean[:, np.newaxis]
+    if std.ndim == 1:
+        std = std[:, np.newaxis]
+    
+    features = (features - mean) / (std + 1e-8)
     
     # Reshape for CNN input: (batch, height, width, channels)
     features = features[np.newaxis, ..., np.newaxis]
@@ -304,12 +310,18 @@ async def detect_voice(
         # Run inference based on model backend
         if MODEL_BACKEND.startswith("tflite"):
             # TFLite inference
-            input_data = features.astype(input_details[0]['dtype'])
+            # Handle INT8 input quantization
+            if input_details[0]['dtype'] == np.uint8:
+                scale, zero_point = input_details[0]['quantization']
+                input_data = (features / scale + zero_point).astype(np.uint8)
+            else:
+                input_data = features.astype(input_details[0]['dtype'])
+            
             interpreter.set_tensor(input_details[0]['index'], input_data)
             interpreter.invoke()
             output_data = interpreter.get_tensor(output_details[0]['index'])
             
-            # Handle INT8 quantization if needed
+            # Handle INT8 output dequantization
             if output_details[0]['dtype'] == np.uint8:
                 scale, zero_point = output_details[0]['quantization']
                 output_data = (output_data.astype(np.float32) - zero_point) * scale
