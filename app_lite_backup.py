@@ -25,13 +25,8 @@ import tensorflow as tf
 tf.config.threading.set_intra_op_parallelism_threads(2)
 tf.config.threading.set_inter_op_parallelism_threads(2)
 
-keras = tf.keras
-
 # ============== Configuration ==============
 API_KEY = os.environ.get("API_KEY", "sk_test_123456789")  # Set in Render environment
-
-# Model backend selection: "keras", "tflite_int8"
-MODEL_BACKEND = os.environ.get("MODEL_BACKEND", "keras")
 
 SAMPLE_RATE = 16000  # Must match training sample rate
 N_LFCC = 40
@@ -42,104 +37,25 @@ MAX_DURATION = 10.0  # seconds (flexible input, always output 312 steps)
 
 SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
 
-# Model paths
-MODEL_PATHS = {
-    "keras": "model/model.h5",
-    "tflite_int8": "model/model_int8.tflite",
-    "tflite_int8_hybrid": "model/model_int8_hybrid.tflite"
-}
+# Model path (TFLite INT8 only)
+MODEL_PATH = "model/model_int8.tflite"
 
-# ============== Model Architecture ==============
-def build_cnn_model(input_shape=(N_LFCC, TARGET_TIME_STEPS, 1)):
-    """
-    CNN architecture for voice classification.
-    Rebuilds the model to avoid Keras version compatibility issues.
-    """
-    from tensorflow.keras import layers, Model
-    
-    inputs = layers.Input(shape=input_shape, name='input')
-    
-    # Block 1
-    x = layers.Conv2D(32, (3, 3), padding='same', name='conv1')(inputs)
-    x = layers.BatchNormalization(name='bn1')(x)
-    x = layers.Activation('relu', name='relu1')(x)
-    x = layers.MaxPooling2D((2, 2), name='pool1')(x)
-    x = layers.Dropout(0.25, name='dropout1')(x)
-    
-    # Block 2
-    x = layers.Conv2D(64, (3, 3), padding='same', name='conv2')(x)
-    x = layers.BatchNormalization(name='bn2')(x)
-    x = layers.Activation('relu', name='relu2')(x)
-    x = layers.MaxPooling2D((2, 2), name='pool2')(x)
-    x = layers.Dropout(0.25, name='dropout2')(x)
-    
-    # Block 3
-    x = layers.Conv2D(128, (3, 3), padding='same', name='conv3')(x)
-    x = layers.BatchNormalization(name='bn3')(x)
-    x = layers.Activation('relu', name='relu3')(x)
-    x = layers.MaxPooling2D((2, 2), name='pool3')(x)
-    x = layers.Dropout(0.25, name='dropout3')(x)
-    
-    # Block 4
-    x = layers.Conv2D(256, (3, 3), padding='same', name='conv4')(x)
-    x = layers.BatchNormalization(name='bn4')(x)
-    x = layers.Activation('relu', name='relu4')(x)
-    x = layers.GlobalAveragePooling2D(name='gap')(x)
-    
-    # Dense layers
-    x = layers.Dense(128, activation='relu', name='dense1')(x)
-    x = layers.Dropout(0.5, name='dropout4')(x)
-    x = layers.Dense(64, activation='relu', name='dense2')(x)
-    x = layers.Dropout(0.5, name='dropout5')(x)
-    
-    # Output
-    outputs = layers.Dense(1, activation='sigmoid', name='output')(x)
-    
-    model = Model(inputs=inputs, outputs=outputs, name='VoiceClassifierCNN')
-    return model
+# ============== Load TFLite Model ==============
+print(f"Loading TFLite INT8 model: {MODEL_PATH}")
 
-# ============== Load Model ==============
-print(f"Loading model with backend: {MODEL_BACKEND}")
-model_path = MODEL_PATHS.get(MODEL_BACKEND, MODEL_PATHS["keras"])
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(f"Model not found: {MODEL_PATH}")
 
-if not os.path.exists(model_path):
-    print(f"⚠ Model not found: {model_path}, falling back to Keras")
-    MODEL_BACKEND = "keras"
-    model_path = MODEL_PATHS["keras"]
+# Load TFLite interpreter
+interpreter = tf.lite.Interpreter(model_path=MODEL_PATH)
+interpreter.allocate_tensors()
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 
-model = None
-interpreter = None
-input_details = None
-output_details = None
-
-if MODEL_BACKEND.startswith("tflite"):
-    # Load TFLite model
-    print(f"Loading TFLite model: {model_path}")
-    interpreter = tf.lite.Interpreter(model_path=model_path)
-    interpreter.allocate_tensors()
-    input_details = interpreter.get_input_details()
-    output_details = interpreter.get_output_details()
-    print(f"✓ TFLite model loaded: {input_details[0]['shape']}")
-else:
-    # Load Keras model
-    print(f"Loading Keras model: {model_path}")
-    try:
-        model = keras.models.load_model(model_path, compile=False)
-        print("✓ Model loaded directly")
-    except Exception as e:
-        print(f"Direct loading failed: {e}")
-        print("Rebuilding from architecture...")
-        model = build_cnn_model()
-        model.load_weights(model_path)
-        print("✓ Model loaded via weights")
-    
-    model.trainable = False
-    
-    # Pre-warm model
-    print("Warming up model...")
-    _dummy_input = np.zeros((1, N_LFCC, TARGET_TIME_STEPS, 1), dtype=np.float32)
-    _ = model(_dummy_input, training=False)
-    print("✓ Model ready")
+print(f"✓ TFLite model loaded")
+print(f"  Input shape: {input_details[0]['shape']}")
+print(f"  Input dtype: {input_details[0]['dtype']}")
+print(f"  Output dtype: {output_details[0]['dtype']}")
 
 # Load normalization parameters
 print("Loading normalization parameters...")
@@ -267,8 +183,8 @@ async def root():
 async def health_check():
     return {
         "status": "healthy",
-        "model_loaded": model is not None,
-        "model_type": "keras"
+        "model_loaded": interpreter is not None,
+        "model_type": "tflite_int8"
     }
 
 @app.post("/api/voice-detection", response_model=VoiceDetectionResponse)
@@ -307,32 +223,27 @@ async def detect_voice(
         # Preprocess audio (in-memory, no disk I/O)
         features = preprocess_audio_bytes(audio_bytes)
         
-        # Run inference based on model backend
-        if MODEL_BACKEND.startswith("tflite"):
-            # TFLite inference
-            # Handle INT8 input quantization
-            if input_details[0]['dtype'] == np.uint8:
-                scale, zero_point = input_details[0]['quantization']
-                input_data = (features / scale + zero_point).astype(np.uint8)
-            else:
-                input_data = features.astype(input_details[0]['dtype'])
-            
-            interpreter.set_tensor(input_details[0]['index'], input_data)
-            interpreter.invoke()
-            output_data = interpreter.get_tensor(output_details[0]['index'])
-            
-            # Handle INT8 output dequantization
-            if output_details[0]['dtype'] == np.uint8:
-                scale, zero_point = output_details[0]['quantization']
-                output_data = (output_data.astype(np.float32) - zero_point) * scale
-            
-            prediction = float(output_data[0][0])
+        # TFLite INT8 inference
+        # Handle INT8 input quantization
+        if input_details[0]['dtype'] == np.uint8:
+            scale, zero_point = input_details[0]['quantization']
+            input_data = (features / scale + zero_point).astype(np.uint8)
         else:
-            # Keras inference
-            prediction = model(features, training=False)[0][0].numpy()
+            input_data = features.astype(input_details[0]['dtype'])
+        
+        interpreter.set_tensor(input_details[0]['index'], input_data)
+        interpreter.invoke()
+        output_data = interpreter.get_tensor(output_details[0]['index'])
+        
+        # Handle INT8 output dequantization
+        if output_details[0]['dtype'] == np.uint8:
+            scale, zero_point = output_details[0]['quantization']
+            output_data = (output_data.astype(np.float32) - zero_point) * scale
+        
+        prediction = float(output_data[0][0])
         
         # Log prediction for debugging
-        print(f"Raw prediction: {prediction:.4f}, Backend: {MODEL_BACKEND}, Language: {request.language}")
+        print(f"Raw prediction: {prediction:.4f}, Language: {request.language}")
         
         # Determine classification
         # Model output: higher value = more likely AI_GENERATED
