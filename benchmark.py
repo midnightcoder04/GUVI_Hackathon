@@ -37,6 +37,8 @@ TEST_SAMPLE_PERCENT = 0.05  # 5% of data
 # Paths
 HUMAN_DIR = "build/clips"
 AI_DIR = "build/clips_AI"
+# HUMAN_DIR = "new_dev/Eleven/real"
+# AI_DIR = "new_dev/Eleven/spoof"
 RESULTS_FILE = "benchmark_results.json"
 
 # Load normalization params
@@ -470,13 +472,14 @@ def main():
     
     # Model configurations
     models_to_test = [
-        ("model/model.h5", "Keras H5", "keras"),
-        ("model/model_int8.tflite", "TFLite INT8", "tflite"),
-        ("model/model_int8_hybrid.tflite", "TFLite INT8 Hybrid", "tflite"),
-        ("model/model_xgboost.json", "XGBoost JSON", "xgboost"),
-        ("model/model_xgboost_depth4.json", "XGBoost JSON LITE", "xgboost"),
-        ("model/model_xgboost.ubj", "XGBoost UBJ", "xgboost"),
-        ("model/model_xgboost.pkl", "XGBoost PKL", "xgboost"),
+        # ("model/model.h5", "Keras H5", "keras"),
+        ("model/best_model_elevenlabs.h5", "Keras H5", "keras"),
+        # ("model/model.tflite", "TFLite FP32", "tflite"),
+        # ("model/model_int8.tflite", "TFLite INT8", "tflite"),
+        # ("model/model_int8_hybrid.tflite", "TFLite INT8 Hybrid", "tflite"),
+        # ("model/model_xgboost.json", "XGBoost JSON", "xgboost"),
+        # ("model/model_xgboost_depth4.json", "XGBoost JSON LITE", "xgboost"),
+        # ("model/model_xgboost.ubj", "XGBoost UBJ", "xgboost"),
     ]
     
     results = []

@@ -177,7 +177,7 @@ def generate_explanation(confidence: float, is_ai: bool) -> str:
 # ============== API Endpoints ==============
 @app.get("/")
 async def root():
-    return {"message": "AI Voice Detection API", "status": "running"}
+    return {"message": "AI Voice Detection API (TFLite INT8)", "status": "running"}
 
 @app.get("/health")
 async def health_check():

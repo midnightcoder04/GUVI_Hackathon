@@ -61,13 +61,13 @@ def load_original_model():
     """Load the original Keras model"""
     print("\n[1/4] Loading original Keras model...")
     try:
-        model = tf.keras.models.load_model("model/model.h5", compile=False)
+        model = tf.keras.models.load_model("model/best_model_elevenlabs.h5")
         print("✓ Loaded directly")
     except Exception as e:
         print(f"Direct loading failed: {e}")
         print("Rebuilding from architecture...")
         model = build_cnn_model()
-        model.load_weights("model/model.h5")
+        model.load_weights("model/best_model_elevenlabs.h5")
         print("✓ Loaded via weights")
     return model
 
@@ -177,14 +177,14 @@ def main():
     print("="*60)
     
     # Check if model exists
-    if not os.path.exists("model/model.h5"):
-        print("❌ model/model.h5 not found!")
+    if not os.path.exists("model/best_model_elevenlabs.h5"):
+        print("❌ model/best_model_elevenlabs.h5 not found!")
         return
     
     # Load original model
     model = load_original_model()
     
-    h5_size = os.path.getsize("model/model.h5") / 1024 / 1024
+    h5_size = os.path.getsize("model/best_model_elevenlabs.h5") / 1024 / 1024
     print(f"Original H5 size: {h5_size:.2f} MB")
     
     # Convert to different formats
@@ -198,7 +198,7 @@ def main():
     print("Conversion Complete!")
     print("="*60)
     print("\nAvailable models:")
-    print("  - model/model.h5              (Original Keras)")
+    print("  - model/best_model_elevenlabs.h5              (Original Keras)")
     print("  - model/model_fp32.tflite     (TFLite FP32)")
     print("  - model/model_int8*.tflite    (TFLite INT8)")
     print("\nNext: Run benchmark.py to compare performance")
