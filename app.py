@@ -31,7 +31,7 @@ keras = tf.keras
 API_KEY = os.environ.get("API_KEY", "sk_test_123456789")  # Set in Render environment
 
 # Model backend selection: "keras", "tflite_int8", "keras2"
-MODEL_BACKEND = os.environ.get("MODEL_BACKEND", "keras2").lower()
+MODEL_BACKEND = os.environ.get("MODEL_BACKEND", "keras3").lower()
 
 SAMPLE_RATE = 16000  # Must match training sample rate
 N_LFCC = 40
@@ -44,8 +44,9 @@ SUPPORTED_LANGUAGES = ["Tamil", "English", "Hindi", "Malayalam", "Telugu"]
 
 # Model paths
 MODEL_PATHS = {
-    "keras": "model/model.h5",
+    "keras": "model/best_model_tts.h5",
     "keras2": "model/best_model_elevenlabs.h5",
+    "keras3": "model/best_model_general.h5",
     "tflite_int8": "model/model_int8.tflite",
     "tflite_int8_hybrid": "model/model_int8_hybrid.tflite"
 }

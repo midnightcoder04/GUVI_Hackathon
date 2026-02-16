@@ -1,192 +1,174 @@
 {
-  "timestamp": "2026-02-13T23:12:22.242627",
-  "dataset_size": 6802,
-  "test_percent": 5.0,
+  "timestamp": "2026-02-16T13:09:41.922820",
+  "dataset_size": 5,
+  "test_percent": 100,
   "results": [
     {
-      "model_name": "Keras H5",
-      "accuracy": 95.81005586592178,
-      "avg_inference_ms": 4.235059783887099,
-      "std_inference_ms": 0.7006024744078597,
-      "min_inference_ms": 3.5864999999972724,
-      "max_inference_ms": 14.884832999996434,
-      "avg_cpu_percent": 296.00554248750365,
-      "total_samples": 6802,
-      "correct_predictions": 6517,
-      "total_errors": 285,
+      "model_name": "Keras H5 ElevenLabs",
+      "accuracy": 60.0,
+      "avg_inference_ms": 14.320783399999915,
+      "std_inference_ms": 3.4918842787624067,
+      "min_inference_ms": 9.450957999999954,
+      "max_inference_ms": 18.439541999999864,
+      "avg_cpu_percent": 869.96,
+      "total_samples": 5,
+      "correct_predictions": 3,
+      "total_errors": 2,
       "errors_by_language": {
-        "en": 83,
-        "hi": 40,
-        "ma": 116,
-        "te": 31,
-        "ta": 15
+        "ta": 1,
+        "en": 1,
+        "hi": 0,
+        "te": 0,
+        "ma": 0
       },
       "language_stats": {
-        "en": {
-          "total": 1403,
-          "errors": 83
-        },
-        "ma": {
-          "total": 1316,
-          "errors": 116
+        "hi": {
+          "total": 1,
+          "errors": 0
         },
         "ta": {
-          "total": 1027,
-          "errors": 15
+          "total": 1,
+          "errors": 1
         },
         "te": {
-          "total": 1770,
-          "errors": 31
+          "total": 1,
+          "errors": 0
         },
-        "hi": {
-          "total": 1286,
-          "errors": 40
+        "en": {
+          "total": 1,
+          "errors": 1
+        },
+        "ma": {
+          "total": 1,
+          "errors": 0
         }
       },
       "error_details": [
         {
-          "file": "en_LibriSpeech_Clean_251-118436-0010.mp3",
+          "file": "TAMIL_VOICE__HUMAN.mp3",
           "actual": "Human",
           "predicted": "AI",
-          "confidence": 0.5582942366600037,
-          "language": "en"
-        },
-        {
-          "file": "hi_common_voice_hi_27761472.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.5846791863441467,
-          "language": "hi"
-        },
-        {
-          "file": "en_LibriSpeech_Other_1630-102884-0000.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.9064181447029114,
-          "language": "en"
-        },
-        {
-          "file": "ma_mlf_06469_00644795722.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.5957865118980408,
-          "language": "ma"
-        },
-        {
-          "file": "en_LibriTTS_R_7850_281318_000019_000002.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.5333147048950195,
-          "language": "en"
-        },
-        {
-          "file": "hi_common_voice_hi_27396687.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.540915310382843,
-          "language": "hi"
-        },
-        {
-          "file": "te_IISc_SYSPINProject_te_m_BOCU_01856.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.7355441451072693,
-          "language": "te"
-        },
-        {
-          "file": "en_LibriTTS_R_251_136532_000016_000006.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.5805279612541199,
-          "language": "en"
-        },
-        {
-          "file": "ma_mlf_03182_00395721303.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.8181936144828796,
-          "language": "ma"
-        },
-        {
-          "file": "en_LibriSpeech_Clean_251-136532-0008.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.9128803610801697,
-          "language": "en"
-        },
-        {
-          "file": "ta_common_voice_ta_28385879.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.5242434144020081,
+          "confidence": 0.8845522999763489,
+          "raw_prediction": 0.8845522999763489,
           "language": "ta"
         },
         {
-          "file": "ma_07_F_set_13_172.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.579115092754364,
-          "language": "ma"
-        },
-        {
-          "file": "ta_common_voice_ta_26642351.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.9739120602607727,
-          "language": "ta"
-        },
-        {
-          "file": "ma_06_M_set_27_016.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.5454358458518982,
-          "language": "ma"
-        },
-        {
-          "file": "ma_07_F_set_19_030.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.5287015438079834,
-          "language": "ma"
-        },
-        {
-          "file": "ma_06_M_set_25_128.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.5420553088188171,
-          "language": "ma"
-        },
-        {
-          "file": "hi_common_voice_hi_27389412.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.5112332105636597,
-          "language": "hi"
-        },
-        {
-          "file": "en_LibriTTS_R_1988_148538_000002_000001.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.8118984699249268,
+          "file": "English_voice_AI_GENERATED.mp3",
+          "actual": "AI",
+          "predicted": "Human",
+          "confidence": 0.5829127728939056,
+          "raw_prediction": 0.41708722710609436,
           "language": "en"
-        },
-        {
-          "file": "ma_07_F_set_07_040.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.6053545475006104,
-          "language": "ma"
-        },
-        {
-          "file": "ma_mlf_03182_01626272909.mp3",
-          "actual": "Human",
-          "predicted": "AI",
-          "confidence": 0.7234763503074646,
-          "language": "ma"
         }
       ],
       "model_size_mb": 1.7267303466796875,
       "model_path": "model/best_model_elevenlabs.h5"
+    },
+    {
+      "model_name": "Keras H5 General",
+      "accuracy": 80.0,
+      "avg_inference_ms": 3.7684421999999884,
+      "std_inference_ms": 0.15134967401138744,
+      "min_inference_ms": 3.681917000000201,
+      "max_inference_ms": 4.07004199999994,
+      "avg_cpu_percent": 281.01,
+      "total_samples": 5,
+      "correct_predictions": 4,
+      "total_errors": 1,
+      "errors_by_language": {
+        "ta": 1,
+        "hi": 0,
+        "te": 0,
+        "en": 0,
+        "ma": 0
+      },
+      "language_stats": {
+        "hi": {
+          "total": 1,
+          "errors": 0
+        },
+        "ta": {
+          "total": 1,
+          "errors": 1
+        },
+        "te": {
+          "total": 1,
+          "errors": 0
+        },
+        "en": {
+          "total": 1,
+          "errors": 0
+        },
+        "ma": {
+          "total": 1,
+          "errors": 0
+        }
+      },
+      "error_details": [
+        {
+          "file": "TAMIL_VOICE__HUMAN.mp3",
+          "actual": "Human",
+          "predicted": "AI",
+          "confidence": 0.8679786920547485,
+          "raw_prediction": 0.8679786920547485,
+          "language": "ta"
+        }
+      ],
+      "model_size_mb": 1.7267303466796875,
+      "model_path": "model/best_model_general.h5"
+    },
+    {
+      "model_name": "Keras H5 TTS",
+      "accuracy": 80.0,
+      "avg_inference_ms": 3.8341833999999686,
+      "std_inference_ms": 0.08889750057805483,
+      "min_inference_ms": 3.763959000000039,
+      "max_inference_ms": 4.005332999999833,
+      "avg_cpu_percent": 294.35999999999996,
+      "total_samples": 5,
+      "correct_predictions": 4,
+      "total_errors": 1,
+      "errors_by_language": {
+        "en": 1,
+        "hi": 0,
+        "ta": 0,
+        "te": 0,
+        "ma": 0
+      },
+      "language_stats": {
+        "hi": {
+          "total": 1,
+          "errors": 0
+        },
+        "ta": {
+          "total": 1,
+          "errors": 0
+        },
+        "te": {
+          "total": 1,
+          "errors": 0
+        },
+        "en": {
+          "total": 1,
+          "errors": 1
+        },
+        "ma": {
+          "total": 1,
+          "errors": 0
+        }
+      },
+      "error_details": [
+        {
+          "file": "English_voice_AI_GENERATED.mp3",
+          "actual": "AI",
+          "predicted": "Human",
+          "confidence": 0.9999855851719985,
+          "raw_prediction": 1.441482800146332e-05,
+          "language": "en"
+        }
+      ],
+      "model_size_mb": 1.726715087890625,
+      "model_path": "model/best_model_tts.h5"
     }
   ]
 }
