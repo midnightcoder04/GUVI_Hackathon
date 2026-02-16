@@ -165,10 +165,8 @@ class VoiceDetectionRequest(BaseModel):
 
 class VoiceDetectionResponse(BaseModel):
     status: str
-    language: str
     classification: str
     confidenceScore: float
-    explanation: str
 
 class ErrorResponse(BaseModel):
     status: str = "error"
@@ -350,15 +348,10 @@ async def detect_voice(
         # Confidence score (distance from decision boundary)
         confidence_score = float(prediction) if is_ai else float(1 - prediction)
         
-        # Generate explanation
-        explanation = generate_explanation(confidence_score, is_ai)
-        
         return VoiceDetectionResponse(
             status="success",
-            language=request.language,
             classification=classification,
-            confidenceScore=round(confidence_score, 2),
-            explanation=explanation
+            confidenceScore=round(confidence_score, 2)
         )
                 
     except base64.binascii.Error:
