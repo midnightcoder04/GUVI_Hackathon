@@ -1,16 +1,16 @@
 {
-  "timestamp": "2026-02-16T13:09:41.922820",
+  "timestamp": "2026-02-16T13:35:02.586103",
   "dataset_size": 5,
   "test_percent": 100,
   "results": [
     {
       "model_name": "Keras H5 ElevenLabs",
       "accuracy": 60.0,
-      "avg_inference_ms": 14.320783399999915,
-      "std_inference_ms": 3.4918842787624067,
-      "min_inference_ms": 9.450957999999954,
-      "max_inference_ms": 18.439541999999864,
-      "avg_cpu_percent": 869.96,
+      "avg_inference_ms": 8.7232332000001,
+      "std_inference_ms": 1.3728952115048758,
+      "min_inference_ms": 7.681083000000033,
+      "max_inference_ms": 11.410999999999838,
+      "avg_cpu_percent": 861.4699999999999,
       "total_samples": 5,
       "correct_predictions": 3,
       "total_errors": 2,
@@ -18,8 +18,8 @@
         "ta": 1,
         "en": 1,
         "hi": 0,
-        "te": 0,
-        "ma": 0
+        "ma": 0,
+        "te": 0
       },
       "language_stats": {
         "hi": {
@@ -30,6 +30,10 @@
           "total": 1,
           "errors": 1
         },
+        "ma": {
+          "total": 1,
+          "errors": 0
+        },
         "te": {
           "total": 1,
           "errors": 0
@@ -37,10 +41,6 @@
         "en": {
           "total": 1,
           "errors": 1
-        },
-        "ma": {
-          "total": 1,
-          "errors": 0
         }
       },
       "error_details": [
@@ -67,20 +67,20 @@
     {
       "model_name": "Keras H5 General",
       "accuracy": 80.0,
-      "avg_inference_ms": 3.7684421999999884,
-      "std_inference_ms": 0.15134967401138744,
-      "min_inference_ms": 3.681917000000201,
-      "max_inference_ms": 4.07004199999994,
-      "avg_cpu_percent": 281.01,
+      "avg_inference_ms": 3.8475747999999754,
+      "std_inference_ms": 0.13529106672564198,
+      "min_inference_ms": 3.728290999999828,
+      "max_inference_ms": 4.098334000000037,
+      "avg_cpu_percent": 294.87,
       "total_samples": 5,
       "correct_predictions": 4,
       "total_errors": 1,
       "errors_by_language": {
         "ta": 1,
         "hi": 0,
+        "ma": 0,
         "te": 0,
-        "en": 0,
-        "ma": 0
+        "en": 0
       },
       "language_stats": {
         "hi": {
@@ -91,15 +91,15 @@
           "total": 1,
           "errors": 1
         },
+        "ma": {
+          "total": 1,
+          "errors": 0
+        },
         "te": {
           "total": 1,
           "errors": 0
         },
         "en": {
-          "total": 1,
-          "errors": 0
-        },
-        "ma": {
           "total": 1,
           "errors": 0
         }
@@ -120,11 +120,11 @@
     {
       "model_name": "Keras H5 TTS",
       "accuracy": 80.0,
-      "avg_inference_ms": 3.8341833999999686,
-      "std_inference_ms": 0.08889750057805483,
-      "min_inference_ms": 3.763959000000039,
-      "max_inference_ms": 4.005332999999833,
-      "avg_cpu_percent": 294.35999999999996,
+      "avg_inference_ms": 3.8059915999999916,
+      "std_inference_ms": 0.0753358529373814,
+      "min_inference_ms": 3.724083000000711,
+      "max_inference_ms": 3.930249999999802,
+      "avg_cpu_percent": 290.55,
       "total_samples": 5,
       "correct_predictions": 4,
       "total_errors": 1,
@@ -132,8 +132,8 @@
         "en": 1,
         "hi": 0,
         "ta": 0,
-        "te": 0,
-        "ma": 0
+        "ma": 0,
+        "te": 0
       },
       "language_stats": {
         "hi": {
@@ -144,6 +144,10 @@
           "total": 1,
           "errors": 0
         },
+        "ma": {
+          "total": 1,
+          "errors": 0
+        },
         "te": {
           "total": 1,
           "errors": 0
@@ -151,10 +155,6 @@
         "en": {
           "total": 1,
           "errors": 1
-        },
-        "ma": {
-          "total": 1,
-          "errors": 0
         }
       },
       "error_details": [
