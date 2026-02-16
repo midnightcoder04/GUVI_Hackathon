@@ -31,7 +31,7 @@ keras = tf.keras
 API_KEY = os.environ.get("API_KEY", "sk_test_123456789")  # Set in Render environment
 
 # Model backend selection: "keras", "tflite_int8", "keras2"
-MODEL_BACKEND = os.environ.get("MODEL_BACKEND", "keras").lower()
+MODEL_BACKEND = os.environ.get("MODEL_BACKEND", "keras3").lower()
 
 SAMPLE_RATE = 16000  # Must match training sample rate
 N_LFCC = 40
